@@ -133,6 +133,7 @@ class Agent():
         self.time_step = 0
         self.warmup = warmup
         self.n_actions = n_actions
+        self.env = env
         self.update_actor_iter = update_actor_interval
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size,

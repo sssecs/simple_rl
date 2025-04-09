@@ -6,9 +6,10 @@ from td3_torch import Agent
 import torch
 from utils import plot_learning_curve
 import numpy as np
+from HER import her_augmentation
 
 if __name__ == '__main__':
-    env = gym.make('PandaReach-v3', render_mode="human")
+    env = gym.make('PandaPush-v3', render_mode="human")
 
     obs_shape = env.observation_space['observation'].shape[0] + \
                 env.observation_space['achieved_goal'].shape[0] + \
@@ -19,7 +20,7 @@ if __name__ == '__main__':
             input_dims=obs_shape, tau=0.005,
             env=env, batch_size=100, layer1_size=400, layer2_size=300,
             n_actions=env.action_space.shape[0])
-    n_games = 1000
+    n_games = 10000
     filename = 'plots/' + 'LunarLanderContinuous_' + str(n_games) + '_games.png'
 
     best_score = -np.Infinity
@@ -27,7 +28,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda")
 
-    agent.load_models()
+    # agent.load_models()
 
     for i in range(n_games):
         observation, info = env.reset()
@@ -37,6 +38,11 @@ if __name__ == '__main__':
         done = False
         score = 0
         turn = 0
+
+        obs_array = []
+        actions_array = []
+        new_obs_array = []
+
         while (not done) and (turn < 1000):
             action = agent.choose_action(state)
             observation_, reward, done, truncated, info = env.step(action)
@@ -44,14 +50,24 @@ if __name__ == '__main__':
             curr_obs, curr_achgoal, curr_desgoal = observation.values()
             state = np.concatenate((curr_obs, curr_achgoal, curr_desgoal), axis=None)
 
-            curr_obs, curr_achgoal, curr_desgoal = observation_.values()
-            state_ = np.concatenate((curr_obs, curr_achgoal, curr_desgoal), axis=None)
+            curr_obs_, curr_achgoal_, curr_desgoal_ = observation_.values()
+            state_ = np.concatenate((curr_obs_, curr_achgoal_, curr_desgoal_), axis=None)
+
+            obs_array.append(observation)
+            actions_array.append(action)
+            new_obs_array.append(observation_)
 
             agent.remember(state, action, reward, state_, done)
+            
+            
             agent.learn()
             score += reward
             observation = observation_
             turn += 1
+
+            
+        
+        her_augmentation(agent, obs_array, actions_array, new_obs_array)
         score_history.append(score)
         avg_score = np.mean(score_history[-100:])
 

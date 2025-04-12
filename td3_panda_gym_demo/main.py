@@ -21,6 +21,7 @@ if __name__ == '__main__':
             env=env, batch_size=100, layer1_size=400, layer2_size=300,
             n_actions=env.action_space.shape[0])
     n_games = 10000
+    opt_steps =64
     filename = 'plots/' + 'LunarLanderContinuous_' + str(n_games) + '_games.png'
 
     best_score = -np.Infinity
@@ -28,11 +29,12 @@ if __name__ == '__main__':
 
     device = torch.device("cuda")
 
-    # agent.load_models()
+    agent.load_models()
 
     for i in range(n_games):
         observation, info = env.reset()
         curr_obs, curr_achgoal, curr_desgoal = observation.values()
+        init_achgoal = curr_achgoal
         state = np.concatenate((curr_obs, curr_achgoal, curr_desgoal), axis=None)
 
         done = False
@@ -57,17 +59,22 @@ if __name__ == '__main__':
             actions_array.append(action)
             new_obs_array.append(observation_)
 
+            
             agent.remember(state, action, reward, state_, done)
+                
             
             
-            agent.learn()
+            
             score += reward
             observation = observation_
             turn += 1
 
-            
-        
-        her_augmentation(agent, obs_array, actions_array, new_obs_array)
+        if np.linalg.norm(init_achgoal-curr_achgoal_) > 0.03:
+            print("block moved")
+            her_augmentation(agent, obs_array, actions_array, new_obs_array)
+        for _ in range(opt_steps):
+          agent.learn()
+
         score_history.append(score)
         avg_score = np.mean(score_history[-100:])
 
